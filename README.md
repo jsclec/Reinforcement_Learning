@@ -16,3 +16,9 @@ Off-Policy Monte Carlo with Ordinary importance sampling and weighted importance
 
 Value prediction and iteration with Dynamic Programming:
 * Use DP to iteratively update value functions until they converge to a reasonable uncertainty
+
+REINFORCE with and without baseline:
+* 
+
+SARSA with neural network function approximation:
+* 
