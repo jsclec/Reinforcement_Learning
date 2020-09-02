@@ -18,7 +18,8 @@ Value prediction and iteration with Dynamic Programming:
 * Use DP to iteratively update value functions until they converge to a reasonable uncertainty
 
 REINFORCE with and without baseline:
-* 
+* Using the REINFORCE algorithm with either a constant naive baseline or a value function approximation as the baseline
+* Implementation uses both Tensorflow and PyTorch, just for fun!
 
-SARSA with neural network function approximation:
-* 
+SARSA-lambda with tile coding feature representation:
+* Update the value function using the SARSA update and eligibility traces to approximate the true value in a continuous state space
