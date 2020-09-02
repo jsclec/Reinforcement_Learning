@@ -5,7 +5,7 @@ import gym
 import torch
 from torch import nn
 from torch import optim
-from torch.utils.tensorboard import SummaryWriter
+
 
 
 
@@ -15,32 +15,16 @@ class PiApproximationWithNN(nn.Module):
                  num_actions,
                  alpha):
         super(PiApproximationWithNN, self).__init__()
-        """
-        state_dims: the number of dimensions of state space
-        action_dims: the number of possible actions
-        alpha: learning rate
-        """
-        # TODO: implement here
-
-        # Tips for TF users: You will need a function that collects the probability of action taken
-        # actions; i.e. you need something like
-        #
-            # pi(.|s_t) = tf.constant([[.3,.6,.1], [.4,.4,.2]])
-            # a_t = tf.constant([1, 2])
-            # pi(a_t|s_t) =  [.6,.2]
-        #
-        # To implement this, you need a tf.gather_nd operation. You can use implement this by,
-        #
-        #tf.gather_nd(pi,tf.stack([tf.range(tf.shape(a_t)[0]),a_t],axis=1)),
-        # assuming len(pi) == len(a_t) == batch_size
+       
         
         self.num_inputs = state_dims
         self.num_actions = num_actions
         self.alpha = alpha
 
+        #intialize a two hidden layer network with ReLu activation functions and 32 nodes
         self.Network = nn.Sequential(nn.Linear(self.num_inputs, 32), nn.ReLU(), nn.Linear(32, 32), nn.ReLU(), nn.Linear(32, 32),nn.Linear(32, self.num_actions), nn.Softmax(dim = -1))
 
-        self.optimizer = optim.Adam(self.Network.parameters(), lr = self.alpha)
+        self.optimizer = optim.Adam(self.Network.parameters(), lr = self.alpha)   #optimizer to minimize the loss function
 
         
 
@@ -64,7 +48,7 @@ class PiApproximationWithNN(nn.Module):
 
         return action
 
-    def update(self, s, a, gamma_t, delta):         #tried doing this with a single state-action pair but got errors
+    def update(self, s, a, gamma_t, delta):         #update the network using a mini batch of returns
 
         self.optimizer.zero_grad()
         
@@ -76,13 +60,9 @@ class PiApproximationWithNN(nn.Module):
 
         logprob = torch.log(self.Network(s_tensor)) #this gives us the log probabilities of all actions from these states
 
-        #print(logprob.data.cpu().numpy(),"\n")
-
         update = gamma_t*delta_tensor * logprob[np.arange(len(action_tensor)), action_tensor] #here we want to choose only the log probabilities of the actions weve taken
 
-        loss = -1*update.mean() #it's supposed to learn faster if you normalize the update using the mean
-
-        #print(loss.data.cpu().numpy())
+        loss = -1*update.mean() #network will learn faster if you normalize the update using the mean
 
         loss.backward() #this calculates the gradients
 
@@ -111,11 +91,9 @@ class VApproximationWithNN(Baseline):
     def __init__(self,
                  state_dims,
                  alpha):
-        """
-        state_dims: the number of dimensions of state space
-        alpha: learning rate
-        """
-        # TODO: implement here
+
+        #now let's approximate the value function using Tensorflow
+  
         self.states_num = state_dims
         
         tf.compat.v1.reset_default_graph()
@@ -156,7 +134,7 @@ class VApproximationWithNN(Baseline):
 
         
 
-        init = tf.compat.v1.global_variables_initializer()
+        init = tf.compat.v1.global_variables_initializer()      #initializes the computational graph
         
         self.sess.run(init)
         
@@ -168,7 +146,6 @@ class VApproximationWithNN(Baseline):
         raise NotImplementedError()
 
     def update(self,s,G):
-        # TODO: implement this method
 
         self.sess.run(self.train_op, feed_dict = {self.G: np.reshape((G),(1,)), self.X: np.reshape((s), (1,-1))})
 
@@ -181,26 +158,16 @@ def REINFORCE(
     num_episodes:int,
     pi:PiApproximationWithNN,
     V:Baseline) -> Iterable[float]:
-    """
-    implement REINFORCE algorithm with and without baseline.
+    
 
-    input:
-        env: target environment; openai gym
-        gamma: discount factor
-        num_episode: #episodes to iterate
-        pi: policy
-        V: baseline
-    output:
-        a list that includes the G_0 for every episodes.
-    """
-    # TODO: implement this method
+    #implement REINFORCE with and without baseline
     
 
     
 
-    G_o = []
+    G_o = []                         #return from the starting state
 
-    disc_rewards = []
+    disc_rewards = []                #store the discounted rewards working backwards from the terminal state
 
     num_actions = env.action_space.n
 
@@ -211,7 +178,7 @@ def REINFORCE(
     for episode in range(num_episodes):
         s_0 = env.reset()
         states = []
-        rewards = []                                            #####why do i have 34 states and rewards but only 33 actions
+        rewards = []                                            
         actions = []
         values = []
         delta = []
@@ -224,10 +191,6 @@ def REINFORCE(
 
         while (not done):
             action = pi.__call__(s_0)
-
-            #action = np.random.choice(num_actions, p = action_prob)
-
-            #probs.append(action_prob[action])
             
             new_state , reward, done, _ = env.step(action)
 
@@ -263,15 +226,14 @@ def REINFORCE(
 
                 for t in range(steps):
             
-                    V.update(states[t], disc_rewards[t])
+                    V.update(states[t], disc_rewards[t])                                        #update the value function
 
-                delta = np.array([disc_rewards[t] - values[t] for t in range(len(values))])
+                delta = np.array([disc_rewards[t] - values[t] for t in range(len(values))])     #this is essentially our target for the batch
 
-                pi.update(states, actions, gamma , delta)
+                pi.update(states, actions, gamma , delta)                                       #update the network
 
         
 
     return G_o
 
-    raise NotImplementedError()
 
